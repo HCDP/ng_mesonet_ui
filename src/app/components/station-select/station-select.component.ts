@@ -26,10 +26,13 @@ export class StationSelectComponent {
 
   private async getStations() {
     let stations: any[] = await this.reqService.getStations();
-    let ids = stations.slice(0, 10).map((station: any) => {
+    let ids = stations.slice(0, 20).map((station: any) => {
       return station.site_id;
     });
-    this.getVariables(ids);
+    let vars = await this.getVariables(ids);
+    console.log(vars);
+    let measurements = await this.getValues(ids, "2024-04-29T12:00:00.000Z", "2024-04-30T12:00:00.000Z");
+    console.log(measurements);
   }
 
   private async getVariables(stationIDs: string[]) {
@@ -71,22 +74,18 @@ export class StationSelectComponent {
       opts.var_ids = varIDs.join(",");
     }
 
-    let reqPromises = [];
+    let data: any = {}
+    let reqData: [string, Promise<any>][] = [];
     for(let id of stationIDs) {
-      reqPromises.push(this.reqService.getMeasurements(id, opts));
-      
+      reqData.push([id, this.reqService.getMeasurements(id, opts)]);
     }
-    return Promise.all(reqPromises).then((vars) => {
-      vars = vars.flat();
-      let varIDs = new Set<string>();
-      vars = vars.filter((variable: any) => {
-        if(!varIDs.has(variable.var_id)) {
-          varIDs.add(variable.var_id);
-          return true;
-        }
-        return false;
-      });
-      return vars;
-    });
+    for(let item of reqData) {
+      try {
+        let stationData = await item[1];
+        data[item[0]] = stationData;
+      }
+      catch {}
+    }
+    return data;
   }
 }
