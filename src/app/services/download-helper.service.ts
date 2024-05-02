@@ -27,7 +27,7 @@ export class DownloadHelperService {
   //give option to zip one file each station or combine to one file
 }
 
-interface FileData {
+export interface FileData {
   fname: string,
   content: any,
   type?: string

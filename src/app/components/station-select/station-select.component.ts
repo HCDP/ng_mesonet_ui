@@ -4,6 +4,7 @@ import { OwlDateTimeModule, OwlNativeDateTimeModule } from '@danielmoncada/angul
 import moment, { Moment } from "moment";
 import { FormControl } from '@angular/forms';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
+import { DownloadHelperService, FileData } from '../../services/download-helper.service';
 
 @Component({
   selector: 'app-station-select',
@@ -17,11 +18,23 @@ export class StationSelectComponent {
 
   public dateControl = new FormControl([null, null]);
 
-  constructor(private reqService: ReqService) {
+  constructor(private reqService: ReqService, private downloadService: DownloadHelperService) {
     this.getStations();
     this.dateControl.valueChanges.subscribe((value) => {
       console.log(value);
     });
+
+    // downloadService.createZip([{
+    //   fname: "test1.txt",
+    //   content: "test1"
+    // }, {
+    //   fname: "test2.txt",
+    //   content: "test2"
+    // }], "test.zip");
+    // downloadService.downloadFile({
+    //   fname: "test1.txt",
+    //   content: "test1"
+    // });
   }
 
   private async getStations() {
