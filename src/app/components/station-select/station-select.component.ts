@@ -39,6 +39,7 @@ export class StationSelectComponent {
 
   private async getStations() {
     let stations: any[] = await this.reqService.getStations();
+    console.log(stations);
     let ids = stations.slice(0, 20).map((station: any) => {
       return station.site_id;
     });
@@ -56,16 +57,16 @@ export class StationSelectComponent {
       reqPromises.push(p);
     }
     return Promise.all(reqPromises).then((vars) => {
-      vars = vars.flat();
+      let flattened = vars.flat();
       let varIDs = new Set<string>();
-      vars = vars.filter((variable: any) => {
+      flattened = flattened.filter((variable: any) => {
         if(!varIDs.has(variable.var_id)) {
           varIDs.add(variable.var_id);
           return true;
         }
         return false;
       });
-      return vars;
+      return flattened;
     });
   }
 
