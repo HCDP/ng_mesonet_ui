@@ -1,0 +1,41 @@
+<div class="wrapper">
+    <mat-accordion>
+        <mat-expansion-panel>
+            <mat-expansion-panel-header>
+                <mat-panel-title>
+                    {{type}}
+                </mat-panel-title>
+                <mat-panel-description>
+                    Select The {{type}} to Retrieve Data for
+                </mat-panel-description>
+            </mat-expansion-panel-header>
+            <mat-icon>search</mat-icon>
+            <mat-form-field>
+                <mat-label>Search {{type}}</mat-label>
+                <input matInput type="text" [formControl]="searchControl">
+                @if(searchControl.value) {
+                    <button matSuffix mat-icon-button aria-label="Clear" (click)="searchControl.setValue('')">
+                        <mat-icon>close</mat-icon>
+                    </button>
+                }
+            </mat-form-field>
+            <br>
+            @if(!searchControl.value) {
+                <div class="select-item">
+                    <mat-checkbox [formControl]="massSelectData.control"></mat-checkbox>
+                    <div class="selector-text">
+                        Select All
+                    </div>
+                </div>
+            }
+            @for(selector of filteredValues; track selector) {
+                <div class="select-item">
+                    <mat-checkbox [formControl]="selector.control"></mat-checkbox> 
+                    <div class="selector-text">
+                        {{getLabel(selector.value)}}
+                    </div>
+                </div>
+            }
+        </mat-expansion-panel>
+    </mat-accordion>
+</div>

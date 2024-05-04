@@ -23,7 +23,7 @@
     "@danielmoncada/angular-datetime-picker": "^17.0.0",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
-    "mime-types": "^2.1.35",
+    "mime": "^4.0.3",
     "moment": "^2.30.1",
     "ng-pick-datetime-moment": "^1.0.8",
     "rxjs": "~7.8.0",

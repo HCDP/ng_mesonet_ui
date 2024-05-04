@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { saveAs } from 'file-saver';
-import * as mime from "mime-types";
+import mime from "mime";
 import JSZip from "jszip";
 
 @Injectable({
@@ -10,7 +10,7 @@ export class DownloadHelperService {
 
   constructor() { }
 
-  async createZip(data: FileData[], packageName: string) {
+  private async createZip(data: FileData[], packageName: string): Promise<void> {
     let zip = new JSZip();
     for(let item of data) {
       zip.file(item.fname, item.content);
@@ -19,16 +19,23 @@ export class DownloadHelperService {
     saveAs(blob, packageName);
   }
 
-  downloadFile(data: FileData) {
-    const mimeType = mime.lookup(data.type || "") || undefined;
+  private createFile(data: FileData): void {
+    const mimeType = mime.getType(data.fname || "") || undefined;
     const blob = new Blob([data.content], {type: mimeType})
     saveAs(blob, data.fname);
   }
-  //give option to zip one file each station or combine to one file
+  
+  public download(data: FileData[]): void {
+    if(data.length == 1) {
+      this.createFile(data[0]);
+    }
+    else if(data.length > 1) {
+      this.createZip(data, "data.zip");
+    }
+  }
 }
 
 export interface FileData {
   fname: string,
-  content: any,
-  type?: string
+  content: string
 }

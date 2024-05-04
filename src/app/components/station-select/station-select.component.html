@@ -1,11 +1,27 @@
-<label>
+<app-multi-selector
+    type="Stations"
+    [values]="stations"
+    [getLabel]="getStationLabel"
+    [match]="matchStation"
+    (selected)="stationsSelected($event)"
+></app-multi-selector>
+
+<app-multi-selector
+    type="Variables"
+    [values]="variables"
+    [getLabel]="getVariableLabel"
+    [match]="matchVariable"
+    (selected)="variablesSelected($event)"
+></app-multi-selector>
+    
+<!-- <label>
     Data Range:
     <input [owlDateTimeTrigger]="dt10" [owlDateTime]="dt10" [formControl]="dateControl"
            selectMode="range">
     <owl-date-time #dt10></owl-date-time>
-</label>
+</label> -->
 
-<label>
+<!-- <label>
     Limit:
     <input
         mdInput
@@ -19,4 +35,4 @@
         mdInput
         type="number"
     />
-</label>
+</label> -->

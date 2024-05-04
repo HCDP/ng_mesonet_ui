@@ -1,52 +1,83 @@
 import { Component } from '@angular/core';
-import { MeasurementParams, ReqService } from "../../services/req.service"
+import { MeasurementParams, ReqService, StationData, VariableData } from "../../services/req.service"
 import { OwlDateTimeModule, OwlNativeDateTimeModule } from '@danielmoncada/angular-datetime-picker';
 import moment, { Moment } from "moment";
 import { FormControl } from '@angular/forms';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import { DownloadHelperService, FileData } from '../../services/download-helper.service';
+import { DataPackagerService, PackageModeFlags } from '../../services/data-packager.service';
+import {MatInputModule} from '@angular/material/input';
+import {MatIconModule} from '@angular/material/icon';
+import {MatButtonModule} from '@angular/material/button';
+import { CommonModule } from '@angular/common';
+import {MatCheckboxModule} from '@angular/material/checkbox';
+import {MatExpansionModule} from '@angular/material/expansion';
+
+import { MultiSelectorComponent } from '../multi-selector/multi-selector.component';
 
 @Component({
   selector: 'app-station-select',
   standalone: true,
-  imports: [OwlDateTimeModule, OwlNativeDateTimeModule, ReactiveFormsModule],
+  imports: [OwlDateTimeModule, OwlNativeDateTimeModule, ReactiveFormsModule, MatInputModule, MatIconModule, MatButtonModule, CommonModule, MatCheckboxModule, MatExpansionModule, MultiSelectorComponent],
   templateUrl: './station-select.component.html',
   styleUrl: './station-select.component.scss'
 })
 export class StationSelectComponent {
-  selectedStations = [];
+  public stations: StationData[] = [];
+  public variables: VariableData[] = [];
+
 
   public dateControl = new FormControl([null, null]);
 
-  constructor(private reqService: ReqService, private downloadService: DownloadHelperService) {
+  constructor(private reqService: ReqService, private downloadService: DownloadHelperService, private packager: DataPackagerService) {
     this.getStations();
     this.dateControl.valueChanges.subscribe((value) => {
       console.log(value);
     });
+  }
 
-    // downloadService.createZip([{
-    //   fname: "test1.txt",
-    //   content: "test1"
-    // }, {
-    //   fname: "test2.txt",
-    //   content: "test2"
-    // }], "test.zip");
-    // downloadService.downloadFile({
-    //   fname: "test1.txt",
-    //   content: "test1"
-    // });
+  matchStation(value: string, station: StationData) {
+    let match = false;
+    if(station.site_name.toLowerCase().includes(value.toLowerCase()) || station.site_id.toLowerCase().includes(value.toLowerCase())) {
+      match = true;
+    }
+    return match;
+  }
+
+  matchVariable(value: string, variable: VariableData) {
+    let match = false;
+    if(variable.var_name.toLowerCase().includes(value.toLowerCase()) || variable.var_id.toLowerCase().includes(value.toLowerCase())) {
+      match = true;
+    }
+    return match;
+  }
+
+  getStationLabel(station: StationData) {
+    return `${station.site_name} (${station.site_id})`
+  }
+
+  getVariableLabel(variable: VariableData) {
+    let label = variable.var_name
+    if(variable.unit) {
+      label += ` (${variable.unit})`;
+    }
+    return label;
+  }
+
+  stationsSelected(stations: StationData[]) {
+    console.log(stations);
+  }
+
+  variablesSelected(variables: VariableData[]) {
+    console.log(variables);
   }
 
   private async getStations() {
-    let stations: any[] = await this.reqService.getStations();
-    console.log(stations);
-    let ids = stations.slice(0, 20).map((station: any) => {
+    this.stations = await this.reqService.getStations();
+    let stationIDs = this.stations.map((station: StationData) => {
       return station.site_id;
     });
-    let vars = await this.getVariables(ids);
-    console.log(vars);
-    let measurements = await this.getValues(ids, "2024-04-29T12:00:00.000Z", "2024-04-30T12:00:00.000Z");
-    console.log(measurements);
+    this.variables = await this.getVariables(stationIDs);
   }
 
   private async getVariables(stationIDs: string[]) {

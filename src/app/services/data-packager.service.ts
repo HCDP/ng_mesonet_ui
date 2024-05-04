@@ -9,13 +9,13 @@ export class DataPackagerService {
 
   constructor() { }
 
-  private constructTable(measurements: MeasurementData, varData: VariableData, stationData: StationData): string[][] {
+  private constructTable(measurements: MeasurementData, varData: VariableMap, stationData: StationMap): string[][] {
     let header = ["station_name", "station_id", "timestamp", "variable_name", "variable_id", "unit", "value"];
     let data = [header];
     for(let station in measurements) {
       for(let variable in measurements[station]) {
         for(let timestamp in measurements[station][variable]) {
-          let row = [stationData[station].site_name, station, timestamp, varData[variable].var_name, variable, varData[variable].unit, measurements[variable][timestamp].toString()];
+          let row = [stationData[station].site_name, station, timestamp, varData[variable].var_name, variable, varData[variable].unit, (measurements[station][variable][timestamp] || "NA").toString()];
           data.push(row);
         }
       }
@@ -23,18 +23,12 @@ export class DataPackagerService {
     return data;
   }
 
-  private constructMatrix(measurements: MeasurementData, varData: VariableData, stationData: StationData): string[][] {
+  private constructMatrix(measurements: MeasurementData, varData: VariableMap, stationData: StationMap): string[][] {
     let variables = new Set<string>();
-    let stationTimestamps: {[station: string]: string[]} = {};
     for(let station in measurements) {
-      let timestamps = new Set<string>();
       for(let variable in measurements[station]) {
         variables.add(variable);
-        for(let timestamp in measurements[station][variable]) {
-          timestamps.add(timestamp);
-        }
       }
-      stationTimestamps[station] = Array.from(timestamps);
     }
     let varIDs = Array.from(variables);
     let varNames = varIDs.map((id: string) => {
@@ -51,20 +45,19 @@ export class DataPackagerService {
     for(let station in measurements) {
       let stationName = stationData[station].site_name;
       let rows: {[timestamp: string]: string[]} = {};
-      for(let timestamp of stationTimestamps[station]) {
-        let row = new Array(varIDs.length).fill("NA");
-        row = [stationName, station, timestamp].concat(row);
-        rows[timestamp] = row;
-      }
       for(let i = 0; i < varIDs.length; i++) {
         let variable = varIDs[i];
         let values = measurements[station][variable] || {};
         for(let timestamp in values) {
           let row = rows[timestamp];
+          if(row === undefined) {
+            row = [stationName, station, timestamp].concat(new Array(varIDs.length).fill("NA"));
+            rows[timestamp] = row;
+          }
           row[i + 3] = (values[timestamp] || "NA").toString();
         }
       }
-      let rowData = rows.values.sort((a: string, b: string) => {
+      let rowData = Object.values(rows).sort((a: string[], b: string[]) => {
         return a[2] < b[2] ? -1 : 1;
       });
       data = data.concat(rowData);
@@ -72,49 +65,65 @@ export class DataPackagerService {
     return data;
   }
 
-  private getFileContent(measurements: MeasurementData, varData: VariableData, stationData: StationData, constructorF: (measurements: MeasurementData, varData: VariableData, stationData: StationData) => string[][]): string {
+  private getFileContent(measurements: MeasurementData, varData: VariableMap, stationData: StationMap, constructorF: (measurements: MeasurementData, varData: VariableMap, stationData: StationMap) => string[][]): string {
     let contentArr = constructorF(measurements, varData, stationData);
     let content = contentArr.map((row: string[]) => {
-      return row.join(",");
+      return `"${row.join("\",\"")}"`;
     }).join("\n");
     return content;
   }
 
-  json2csv(measurements: MeasurementData, varData: VariableData, stationData: StationData, mode: number): FileData[] {
+  json2csv(measurements: MeasurementData, varData: VariableData[], stationData: StationData[], mode: number): FileData[] {
+    //convert var and station data arrays to maps
+    let varMap: VariableMap = {};
+    let stationMap: StationMap = {};
+    for(let variable of varData) {
+      varMap[variable.var_id] = variable;
+    }
+    for(let station of stationData) {
+      stationMap[station.site_id] = station;
+    }
     let data: FileData[] = [];
     let constructorF = (mode & PackageModeFlags.CSV_STYLE_MASK) == PackageModeFlags.TABLE ? this.constructTable : this.constructMatrix;
     if((mode & PackageModeFlags.NUM_FILES_MASK) == PackageModeFlags.MULTI) {
       for(let station in measurements) {
         let singleMeasurements: MeasurementData = {};
         singleMeasurements[station] = measurements[station];
-        let content = this.getFileContent(singleMeasurements, varData, stationData, constructorF);
+        let content = this.getFileContent(singleMeasurements, varMap, stationMap, constructorF);
         let fileData: FileData = {
           fname: `${station}.csv`,
           content: content,
-          type: "csv"
         }
         data.push(fileData);
       }
     }
     else {
-      let content = this.getFileContent(measurements, varData, stationData, constructorF);
+      let content = this.getFileContent(measurements, varMap, stationMap, constructorF);
       let fileData: FileData = {
         fname: `data.csv`,
         content: content,
-        type: "csv"
       }
       data.push(fileData);
     }
     return data;
   }
 
-  json2data(measurements: MeasurementData, mode: number): JSON[] {
-    let data: any[] = [measurements]
+  json2data(measurements: MeasurementData, mode: number): FileData[] {
+    let data: FileData[] = [];
     if((mode & PackageModeFlags.NUM_FILES_MASK) == PackageModeFlags.MULTI) {
       data = [];
       for(let station in measurements) {
-        data.push(measurements[station]);
+        data.push({
+          fname: `${station}.json`,
+          content: JSON.stringify(measurements[station], null, 4),
+        });
       }
+    }
+    else {
+      data.push({
+        fname: `data.json`,
+        content: JSON.stringify(measurements, null, 4),
+      });
     }
     return data;
   }
@@ -127,4 +136,12 @@ export enum PackageModeFlags {
   MATRIX = 1 << 1,
   NUM_FILES_MASK = 1,
   CSV_STYLE_MASK = 1 << 1
+}
+
+interface VariableMap {
+  [varID: string]: VariableData
+}
+
+interface StationMap {
+  [stationID: string]: StationData
 }

@@ -51,6 +51,9 @@ export class ReqService {
     return this.getFromAPI(ep, {
       station_id: stationID,
       ...options
+    }).then((data: MeasurementData) => {
+      delete data["measurements_in_file"];
+      return data;
     });
   }
 
@@ -81,22 +84,18 @@ export interface MeasurementData {
 }
 
 export interface VariableData {
-  [varID: string]: {
     var_id: string,
     var_name: string,
     unit: string,
     [key: string]: any
-  }
 }
 
 export interface StationData {
-  [stationID: string]: {
-    site_id: string,
-    site_name: string
-    description: string,
-    elevation: number,
-    latitude: number,
-    longitude: number,
-    [key: string]: any
-  }
+  site_id: string,
+  site_name: string
+  description: string,
+  elevation: number,
+  latitude: number,
+  longitude: number,
+  [key: string]: any
 }
