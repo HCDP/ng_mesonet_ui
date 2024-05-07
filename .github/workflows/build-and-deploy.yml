@@ -21,7 +21,7 @@ jobs:
     - name: add config
       run: echo "${{ secrets.CONFIG_JSON }}" | base64 -d > src/assets/config.json
     - name: build
-      run: npm install && ng build --prod
+      run: npm install && ng build --configuration production
     - name: upload artifacts
       uses: actions/upload-pages-artifact@v3
       with:
