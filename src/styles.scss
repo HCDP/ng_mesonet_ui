@@ -1,6 +1,37 @@
 /* You can add global styles to this file, and also import other style files */
 
-@import "@danielmoncada/angular-datetime-picker/assets/style/picker.min.css";
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+$app-primary: mat.define-palette(mat.$indigo-palette);
+$app-accent: mat.define-palette(mat.$blue-palette);
+$app-warn: mat.define-palette(mat.$red-palette);
+
+$theme: mat.define-light-theme(
+  (
+    color: (
+      primary: $app-primary,
+      accent: $app-accent,
+      warn: $app-warn,
+    ),
+    typography: mat.define-typography-config(),
+    density: 0,
+  )
+);
+
+@include mat.all-component-themes($theme);
+
+// Use this import in a real project instead
+@import '@mat-datetimepicker/core/datetimepicker/datetimepicker-theme.scss';
+//@import 'dist/core/datetimepicker/datetimepicker-theme.scss';
+
+// Using the $theme variable from the pre-built theme you can call the theming function
+@include mat-datetimepicker-theme($theme);
+
+.mat-datetimepicker-calendar-header {
+    color: white;
+}
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

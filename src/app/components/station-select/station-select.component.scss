@@ -1,3 +1,57 @@
+.num-input {
+    width: 100px;
+}
+
 .wrapper {
-    width: 350px;
+    display: flex;
+    padding-top: 20px;
+}
+
+.prop-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.group {
+    padding: 10px;
+    min-width: fit-content;
+}
+
+.item {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.warn-props {
+    width: 250px;
+    position: relative;
+    top: -27px;
+}
+
+.warning {
+    padding-bottom: 5px;
+}
+
+.select-item {
+    display: flex;
+    height: fit-content;
+    align-items: center;
+}
+
+.selector-text {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.checkbox {
+    padding-right: 5px;
+}
+
+.info {
+    padding: 5px;
+}
+
+.loading {
+    padding: 10px;
 }

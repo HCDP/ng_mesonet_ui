@@ -20,22 +20,25 @@
                 }
             </mat-form-field>
             <br>
+            
             @if(!searchControl.value) {
                 <div class="select-item">
-                    <mat-checkbox [formControl]="massSelectData.control"></mat-checkbox>
+                    <mat-checkbox class="checkbox" [formControl]="massSelectData.control"></mat-checkbox>
                     <div class="selector-text">
                         Select All
                     </div>
                 </div>
             }
-            @for(selector of filteredValues; track selector) {
-                <div class="select-item">
-                    <mat-checkbox [formControl]="selector.control"></mat-checkbox> 
-                    <div class="selector-text">
-                        {{getLabel(selector.value)}}
+            <div class="selectors">
+                @for(selector of filteredValues; track selector) {
+                    <div class="select-item">
+                        <mat-checkbox class="checkbox" [formControl]="selector.control"></mat-checkbox> 
+                        <div class="selector-text">
+                            {{getLabel(selector.value)}}
+                        </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
         </mat-expansion-panel>
     </mat-accordion>
 </div>
