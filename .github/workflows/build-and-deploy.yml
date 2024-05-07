@@ -16,6 +16,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 20.9.0
+    - name: add cli
+      run: npm install -g @angular/cli@V17.3.6
     - name: add config
       run: echo "${{ secrets.CONFIG_JSON }}" | base64 -d > src/assets/config.json
     - name: build
