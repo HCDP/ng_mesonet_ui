@@ -1,0 +1,132 @@
+<div class="wrapper">
+    <div class="selectors">
+      <app-multi-selector
+        type="Stations"
+        [values]="stations"
+        [getLabel]="getStationLabel"
+        [match]="matchStation"
+        [loading]="stations.length < 1"
+        (selected)="stationsSelected($event)"
+      ></app-multi-selector>
+  
+      <app-multi-selector
+        type="Variables"
+        [values]="variables"
+        [getLabel]="getVariableLabel"
+        [match]="matchVariable"
+        [loading]="variables.length < 1"
+        (selected)="variablesSelected($event)"
+      ></app-multi-selector>
+    </div>
+    <div>
+      <div class="prop-wrapper">
+        <div class="group">
+          <mat-form-field class="item">
+            <mat-label>Start Time</mat-label>
+            <mat-datetimepicker-toggle
+              [for]="startDate"
+              matSuffix
+            ></mat-datetimepicker-toggle>
+            <mat-datetimepicker
+              #startDate
+              [type]="'datetime'"
+              [openOnFocus]="true"
+              [timeInterval]="5"
+              [mode]="'portrait'"
+            ></mat-datetimepicker>
+            <input
+              matInput
+              [matDatetimepicker]="startDate"
+              [formControl]="startControl"
+              autocomplete="true"
+            />
+          </mat-form-field>
+          
+          <mat-form-field class="item">
+            <mat-label>End Time</mat-label>
+            <mat-datetimepicker-toggle
+              [for]="endDate"
+              matSuffix
+            ></mat-datetimepicker-toggle>
+            <mat-datetimepicker
+              #endDate
+              [type]="'datetime'"
+              [openOnFocus]="true"
+              [timeInterval]="5"
+              [mode]="'portrait'"
+            ></mat-datetimepicker>
+            <input
+              matInput
+              [matDatetimepicker]="endDate"
+              [formControl]="endControl"
+              autocomplete="true"
+            />
+          </mat-form-field>
+        </div>
+        <div class="group">
+            <div class="warn-props">
+              <div class="warning">
+                <i class="material-icons">warning_amber</i> Use with caution, these properties may not yield the expected results
+              </div>
+              <div>
+                <mat-form-field class="item num-input">
+                  <mat-label>Limit</mat-label>
+                  <input matInput type="number" [formControl]="limitControl">
+                </mat-form-field>
+                <mat-form-field class="item num-input">
+                  <mat-label>Offset</mat-label>
+                  <input matInput type="number" [formControl]="offsetControl">
+                </mat-form-field>
+              </div>
+            </div>
+        </div>
+    
+        <div class="select-item group">
+          <mat-checkbox class="checkbox" [formControl]="singleFileControl"></mat-checkbox>
+          <div class="selector-text">
+              Combine into single file
+          </div>
+          <i class="material-icons info" matTooltip="If selected all data will be combined into a single file. Otherwise each station will have its own file." matTooltipPosition="right">info</i>
+        </div>
+      
+        <div class="group">
+          <mat-form-field>
+            <mat-label>File Format</mat-label>
+            <mat-select [formControl]="fileFormatControl">
+              @for(format of fileFormats.formats; track format) {
+                <mat-option [value]="format.value">{{format.label}}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <i class="material-icons info" [matTooltip]="fileFormats.description" matTooltipPosition="right">info</i>
+        </div>
+        
+      
+        <div class="group">
+          @if(fileFormatControl.value == "csv") {
+            <mat-form-field>
+              <mat-label>CSV Format</mat-label>
+              <mat-select [formControl]="csvFormatControl">
+                @for(format of csvFormats.formats; track format) {
+                  <mat-option [value]="format.value" [matTooltip]="format.description" matTooltipPosition="right">{{format.label}}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <i class="material-icons info" [matTooltip]="csvFormats.description" matTooltipPosition="right">info</i>
+          }
+        </div>
+      </div>
+    </div>
+    
+    <div class="group button-container">
+      <div [matTooltipDisabled]="validate()" matTooltip="Please select at least one station and variable to download" matTooltipPosition="right">
+        <button mat-flat-button [disabled]="!validate()" color="primary" (click)="download()">Download Data</button>
+      </div>
+      
+      @if(loading) {
+        <div class="loading">
+          <mat-spinner></mat-spinner>
+        </div>
+      }
+    </div>
+</div>  

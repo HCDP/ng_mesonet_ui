@@ -10,12 +10,13 @@ export class ReqService {
   private static readonly API_HEADER = new HttpHeaders({
     "Authorization": `Bearer ${config.apiToken}`
   })
+  private static readonly RETRIES = 3;
 
   constructor(private http: HttpClient) {
 
   }
 
-  private async getFromAPI(ep: string, urlParams: any = {}): Promise<any> {
+  private async getFromAPI(ep: string, urlParams: any = {}, retries = ReqService.RETRIES): Promise<any> {
     let paramString = this.encodeURLParams(urlParams);
     let url = `${ReqService.API_URL}${ep}`;
     if(paramString) {
@@ -28,7 +29,12 @@ export class ReqService {
           resolve(res);
         },
         error: (e) => {
-          reject(e);
+          if(retries < 1) {
+            reject(e);
+          }
+          else {
+            resolve(this.getFromAPI(ep, urlParams, retries - 1));
+          }
         }
       });
     });

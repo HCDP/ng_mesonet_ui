@@ -6,11 +6,12 @@ import { CommonModule } from '@angular/common';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatExpansionModule} from '@angular/material/expansion';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-multi-selector',
   standalone: true,
-  imports: [MatInputModule, MatIconModule, MatButtonModule, CommonModule, MatCheckboxModule, MatExpansionModule, ReactiveFormsModule],
+  imports: [MatInputModule, MatIconModule, MatButtonModule, CommonModule, MatCheckboxModule, MatExpansionModule, ReactiveFormsModule, MatProgressSpinnerModule],
   templateUrl: './multi-selector.component.html',
   styleUrl: './multi-selector.component.scss'
 })
@@ -21,6 +22,7 @@ export class MultiSelectorComponent {
   }
   @Input() getLabel: (value: any) => string = (value: any) => "";
   @Input() match: (searchValue: string, dataValue: any) => boolean = (searchValue: string, dataValue: any) => false;
+  @Input() loading: boolean = false;
 
   @Output() selected: EventEmitter<any[]> = new EventEmitter<any>();
 

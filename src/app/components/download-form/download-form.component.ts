@@ -1,35 +1,33 @@
 import { Component } from '@angular/core';
-import { MeasurementParams, ReqService, StationData, VariableData } from "../../services/req.service"
-import { OwlDateTimeModule, OwlNativeDateTimeModule } from '@danielmoncada/angular-datetime-picker';
+import { MeasurementData, MeasurementParams, ReqService, StationData, VariableData } from "../../services/req.service"
 import moment from "moment";
 import { FormControl } from '@angular/forms';
 import { ReactiveFormsModule} from '@angular/forms';
 import { DownloadHelperService, FileData } from '../../services/download-helper.service';
 import { DataPackagerService, PackageModeFlags } from '../../services/data-packager.service';
-import {MatInputModule} from '@angular/material/input';
-import {MatIconModule} from '@angular/material/icon';
-import {MatButtonModule} from '@angular/material/button';
+import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
-import {MatCheckboxModule} from '@angular/material/checkbox';
-import {MatExpansionModule} from '@angular/material/expansion';
-import {MatTooltipModule} from '@angular/material/tooltip';
-import {MatSelectModule} from '@angular/material/select';
-import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-
-
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MultiSelectorComponent } from '../multi-selector/multi-selector.component';
-
 import { MatMomentDatetimeModule } from '@mat-datetimepicker/moment';
 import { MatDatetimepickerModule } from '@mat-datetimepicker/core';
+import { MatDialog } from '@angular/material/dialog';
+import { InfoPopupComponent } from '../dialogs/info-popup/info-popup.component';
+import { ErrorPopupComponent } from '../dialogs/error-popup/error-popup.component';
 
 @Component({
-  selector: 'app-station-select',
+  selector: 'app-download-form',
   standalone: true,
-  imports: [MatProgressSpinnerModule, MatTooltipModule, OwlDateTimeModule, OwlNativeDateTimeModule, ReactiveFormsModule, MatInputModule, MatIconModule, MatButtonModule, CommonModule, MatCheckboxModule, MatExpansionModule, MultiSelectorComponent, MatMomentDatetimeModule, MatDatetimepickerModule, MatSelectModule],
-  templateUrl: './station-select.component.html',
-  styleUrl: './station-select.component.scss'
+  imports: [MatProgressSpinnerModule, MatTooltipModule, ReactiveFormsModule, MatInputModule, MatIconModule, MatButtonModule, CommonModule, MatCheckboxModule, MultiSelectorComponent, MatMomentDatetimeModule, MatDatetimepickerModule, MatSelectModule],
+  templateUrl: './download-form.component.html',
+  styleUrl: './download-form.component.scss'
 })
-export class StationSelectComponent {
+export class DownloadFormComponent {
   public stations: StationData[] = [];
   public variables: VariableData[] = [];
   public loading: boolean = false;
@@ -68,8 +66,14 @@ export class StationSelectComponent {
   singleFileControl = new FormControl(false);
   csvFormatControl = new FormControl("table");
 
-  constructor(private reqService: ReqService, private downloadService: DownloadHelperService, private packager: DataPackagerService) {
-    this.getStations();
+  constructor(private reqService: ReqService, private downloadService: DownloadHelperService, private packager: DataPackagerService, public dialog: MatDialog) {
+    this.getStationsAndVariables();
+  }
+
+  openDialog(message: string, type: "info" | "error"): void {
+    this.dialog.open(type == "info" ? InfoPopupComponent : ErrorPopupComponent, {
+      data: message
+    });
   }
 
   matchStation(value: string, station: StationData) {
@@ -108,12 +112,17 @@ export class StationSelectComponent {
     this.selectedVariables = variables;
   }
 
-  private async getStations() {
-    this.stations = await this.reqService.getStations();
-    let stationIDs = this.stations.map((station: StationData) => {
-      return station.site_id;
-    });
-    this.variables = await this.getVariables(stationIDs);
+  private async getStationsAndVariables() {
+    try {
+      this.stations = await this.reqService.getStations();
+      let stationIDs = this.stations.map((station: StationData) => {
+        return station.site_id;
+      });
+      this.variables = await this.getVariables(stationIDs);
+    }
+    catch {
+      this.openDialog("An error occurred while retrieving the mesonet data.", "error");
+    }
   }
 
   private async getVariables(stationIDs: string[]) {
@@ -136,7 +145,7 @@ export class StationSelectComponent {
     });
   }
 
-  private async getValues(stationIDs: string[], startDate?: string, endDate?: string, limit?: number, offset?: number, varIDs: string[] = []): Promise<any> {
+  private async getValues(stationIDs: string[], startDate?: string, endDate?: string, limit?: number, offset?: number, varIDs: string[] = []): Promise<MeasurementData> {
     let opts: MeasurementParams = {};
     if(startDate !== undefined) {
       opts.start_date = startDate;
@@ -155,7 +164,7 @@ export class StationSelectComponent {
     }
 
     let data: any = {}
-    let reqData: [string, Promise<any>][] = [];
+    let reqData: [string, Promise<MeasurementData>][] = [];
     for(let id of stationIDs) {
       reqData.push([id, this.reqService.getMeasurements(id, opts)]);
     }
@@ -185,8 +194,14 @@ export class StationSelectComponent {
     let varIDs = this.selectedVariables.length == this.variables.length ? [] : this.selectedVariables.map((variable: VariableData) => {
       return variable.var_id;
     });
-    let measurements = await this.getValues(stationIDs, start, end, limit, offset, varIDs);
-    console.log(measurements);
+    let measurements: MeasurementData | null = null;
+    try {
+      measurements = await this.getValues(stationIDs, start, end, limit, offset, varIDs);
+    }
+    catch {
+      this.openDialog("An error occurred while retrieving the mesonet data.", "error");
+      return;
+    }
     let formatFlags = this.singleFileControl.value ? PackageModeFlags.SINGLE : PackageModeFlags.MULTI;
     formatFlags |= this.csvFormatControl.value == "matrix" ? PackageModeFlags.MATRIX : PackageModeFlags.TABLE;
     let data: FileData[] = [];
@@ -198,6 +213,10 @@ export class StationSelectComponent {
     }
     if(data.length > 0) {
       this.downloadService.download(data);
+      this.openDialog("Your download package has been generated. Check your browser for the downloaded data.", "info");
+    }
+    else {
+      this.openDialog("No data was found. Please choose different options and try again.", "info");
     }
     this.loading = false;
   }

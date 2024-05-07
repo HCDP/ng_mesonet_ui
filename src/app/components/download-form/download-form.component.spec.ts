@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { StationSelectComponent } from './station-select.component';
+import { DownloadFormComponent } from './download-form.component';
 
-describe('StationSelectComponent', () => {
-  let component: StationSelectComponent;
-  let fixture: ComponentFixture<StationSelectComponent>;
+describe('DownloadFormComponent', () => {
+  let component: DownloadFormComponent;
+  let fixture: ComponentFixture<DownloadFormComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [StationSelectComponent]
+      imports: [DownloadFormComponent]
     })
     .compileComponents();
     
-    fixture = TestBed.createComponent(StationSelectComponent);
+    fixture = TestBed.createComponent(DownloadFormComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
