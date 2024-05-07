@@ -25,7 +25,7 @@ jobs:
     - name: upload artifacts
       uses: actions/upload-pages-artifact@v3
       with:
-        path: dist
+        path: dist/mesonet_ui/browser
   deploy:
     # Add a dependency to the build job
     needs: build
