@@ -1,10 +1,9 @@
 import { Component } from '@angular/core';
-import { MeasurementData, MeasurementParams, ReqService, StationData, VariableData } from "../../services/req.service"
-import moment from "moment";
-import { FormControl } from '@angular/forms';
+import { PackageParams, ReqService, StationData, VariableData } from "../../services/req.service"
+import moment, { Moment } from "moment";
+import { FormControl, Validators } from '@angular/forms';
 import { ReactiveFormsModule} from '@angular/forms';
-import { DownloadHelperService, FileData } from '../../services/download-helper.service';
-import { DataPackagerService, PackageModeFlags } from '../../services/data-packager.service';
+import { DownloadHelperService } from '../../services/download-helper.service';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,18 +18,19 @@ import { MatDatetimepickerModule } from '@mat-datetimepicker/core';
 import { MatDialog } from '@angular/material/dialog';
 import { InfoPopupComponent } from '../dialogs/info-popup/info-popup.component';
 import { ErrorPopupComponent } from '../dialogs/error-popup/error-popup.component';
+import { MatProgressBarModule, ProgressBarMode } from '@angular/material/progress-bar';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-download-form',
   standalone: true,
-  imports: [MatProgressSpinnerModule, MatTooltipModule, ReactiveFormsModule, MatInputModule, MatIconModule, MatButtonModule, CommonModule, MatCheckboxModule, MultiSelectorComponent, MatMomentDatetimeModule, MatDatetimepickerModule, MatSelectModule],
+  imports: [MatProgressBarModule, MatProgressSpinnerModule, MatTooltipModule, ReactiveFormsModule, MatInputModule, MatIconModule, MatButtonModule, CommonModule, MatCheckboxModule, MultiSelectorComponent, MatMomentDatetimeModule, MatDatetimepickerModule, MatSelectModule],
   templateUrl: './download-form.component.html',
   styleUrl: './download-form.component.scss'
 })
 export class DownloadFormComponent {
   public stations: StationData[] = [];
   public variables: VariableData[] = [];
-  public loading: boolean = false;
   private selectedStations: StationData[] = [];
   private selectedVariables: VariableData[] = [];
 
@@ -48,26 +48,82 @@ export class DownloadFormComponent {
   csvFormats = {
     description: "The format of the CSV file.",
     formats: [{
-      label: "Table",
-      description: "A table of values for each station, timestamp, and variable.",
-      value: "table"
-    }, {
       label: "Matrix",
       description: "A matrix of values for each station in timestamp x variable format.",
       value: "matrix"
+    }, {
+      label: "Table",
+      description: "A table of values for each station, timestamp, and variable.",
+      value: "table"
     }]
   };
 
-  startControl = new FormControl(moment().subtract(12, "hours"));
-  endControl = new FormControl(moment());
-  limitControl = new FormControl(null);
-  offsetControl = new FormControl(null);
-  fileFormatControl = new FormControl("csv");
-  singleFileControl = new FormControl(false);
-  csvFormatControl = new FormControl("table");
+  startControl = new FormControl<Moment>(moment().subtract(12, "hours"), {updateOn: "blur"});
+  endControl = new FormControl<Moment>(moment(), {updateOn: "blur"});
+  limitControl = new FormControl<number | null>(null);
+  offsetControl = new FormControl<number | null>(null);
+  fileFormatControl = new FormControl<"csv" | "json">("csv");
+  singleFileControl = new FormControl<boolean>(false);
+  csvFormatControl = new FormControl<"table" | "matrix">("matrix");
+  emailControl = new FormControl<string>("");
+  sendToEmailControl = new FormControl<boolean>(false);
+  forceEmail: boolean = false;
+  lastValidStart: Moment;
+  lastValidEnd: Moment;
+  loadData: {
+    loading: boolean,
+    mode: ProgressBarMode,
+    progress: Observable<number> | null
+  } = {
+    loading: false,
+    mode: "query",
+    progress: null
+  };
 
-  constructor(private reqService: ReqService, private downloadService: DownloadHelperService, private packager: DataPackagerService, public dialog: MatDialog) {
+  constructor(private reqService: ReqService, private downloadService: DownloadHelperService, public dialog: MatDialog) {
+    this.reqService.getMeasurements("0141", {
+      start_date: "2010-02-24T10:10:10Z",
+      end_date: "2010-02-25T10:10:10Z",
+    });
     this.getStationsAndVariables();
+    this.emailControl.setValidators(Validators.email);
+
+    this.lastValidStart = this.startControl.value!;
+    this.lastValidEnd = this.endControl.value!;
+
+    this.startControl.valueChanges.subscribe((value: Moment | null) => {
+      let newValue = null;
+      if(!this.startControl.valid || !value) {
+        newValue = this.lastValidStart.clone();
+      }
+      else if(value.isAfter(this.endControl.value)) {
+        newValue = this.endControl.value!.clone();
+      }
+      if(newValue === null) {
+        this.lastValidStart = value!;
+        this.checkForceEmail();
+      }
+      else {
+        this.startControl.setValue(newValue);
+      }
+    });
+
+    this.endControl.valueChanges.subscribe((value: Moment | null) => {
+      let newValue = null;
+      if(!this.endControl.valid || !value) {
+        newValue = this.lastValidStart.clone();
+      }
+      else if(value.isBefore(this.startControl.value)) {
+        newValue = this.startControl.value!.clone();
+      }
+      if(newValue === null) {
+        this.lastValidStart = value!;
+        this.checkForceEmail();
+      }
+      else {
+        this.endControl.setValue(newValue);
+      }
+    });
   }
 
   openDialog(message: string, type: "info" | "error"): void {
@@ -115,109 +171,80 @@ export class DownloadFormComponent {
   private async getStationsAndVariables() {
     try {
       this.stations = await this.reqService.getStations();
-      let stationIDs = this.stations.map((station: StationData) => {
-        return station.site_id;
-      });
-      this.variables = await this.getVariables(stationIDs);
+      let variableMap: {[variableID: string]: VariableData} = {};
+      for(let station of this.stations) {
+        if(station.instruments[0].variables) {
+          for(let variable of station.instruments[0].variables) {
+            variableMap[variable.var_id] = variable;
+          }
+        }
+      }
+      this.variables = Object.values(variableMap);
     }
-    catch {
+    catch(e) {
+      console.log(e);
       this.openDialog("An error occurred while retrieving the mesonet data.", "error");
     }
-  }
-
-  private async getVariables(stationIDs: string[]) {
-    let reqPromises = [];
-    for(let station of stationIDs) {
-      let p = this.reqService.getVariables(station);
-      reqPromises.push(p);
-    }
-    return Promise.all(reqPromises).then((vars) => {
-      let flattened = vars.flat();
-      let varIDs = new Set<string>();
-      flattened = flattened.filter((variable: any) => {
-        if(!varIDs.has(variable.var_id)) {
-          varIDs.add(variable.var_id);
-          return true;
-        }
-        return false;
-      });
-      return flattened;
-    });
-  }
-
-  private async getValues(stationIDs: string[], startDate?: string, endDate?: string, limit?: number, offset?: number, varIDs: string[] = []): Promise<MeasurementData> {
-    let opts: MeasurementParams = {};
-    if(startDate !== undefined) {
-      opts.start_date = startDate;
-    }
-    if(endDate !== undefined) {
-      opts.end_date = endDate;
-    }
-    if(offset !== undefined) {
-      opts.offset = offset;
-    }
-    if(limit !== undefined) {
-      opts.limit = limit;
-    }
-    if(varIDs.length > 0) {
-      opts.var_ids = varIDs.join(",");
-    }
-
-    let data: any = {}
-    let reqData: [string, Promise<MeasurementData>][] = [];
-    for(let id of stationIDs) {
-      reqData.push([id, this.reqService.getMeasurements(id, opts)]);
-    }
-    for(let item of reqData) {
-      try {
-        let stationData = await item[1];
-        data[item[0]] = stationData;
-      }
-      catch {}
-    }
-    return data;
   }
 
   validate(): boolean {
-    return this.selectedStations.length > 0 && this.selectedVariables.length > 0 && !this.loading;
+    return this.emailControl.valid && this.selectedStations.length > 0 && this.selectedVariables.length > 0 && !this.loadData.loading;
   }
 
-  async download(): Promise<void> {
-    this.loading = true;
-    let start = this.startControl.value?.toISOString() || undefined;
-    let end = this.endControl.value?.toISOString() || undefined;
-    let limit = this.limitControl.value || undefined;
-    let offset = this.offsetControl.value || undefined;
-    let stationIDs = this.selectedStations.map((station: StationData) => {
+  checkForceEmail() {
+    let forceEmail = false;
+    if(this.startControl.value && this.endControl.value && this.endControl.value.diff(this.startControl.value, "months") > 1) {
+      this.sendToEmailControl.setValue(true);
+      forceEmail = true;
+    }
+    this.forceEmail = forceEmail;
+  }
+
+  async submit(): Promise<void> {
+    this.loadData.loading = true;
+    this.loadData.mode = "query";
+
+    let selectedStationIDs = this.selectedStations.map((station: StationData) => {
       return station.site_id;
-    });
-    let varIDs = this.selectedVariables.length == this.variables.length ? [] : this.selectedVariables.map((variable: VariableData) => {
+    }).join(",");
+    let selectedVariableIDs = this.selectedVariables.length == this.variables.length ? undefined : this.selectedVariables.map((variable: VariableData) => {
       return variable.var_id;
-    });
-    let measurements: MeasurementData | null = null;
-    try {
-      measurements = await this.getValues(stationIDs, start, end, limit, offset, varIDs);
+    }).join(",");
+
+    let params: PackageParams = {
+      station_ids: selectedStationIDs,
+      email: this.emailControl.value!,
+      combine: this.singleFileControl.value || undefined,
+      ftype: this.fileFormatControl.value || undefined,
+      csvMode: this.csvFormatControl.value || undefined,
+      start_date: this.startControl.value!.utcOffset("-10:00", true).toISOString(),
+      end_date: this.endControl.value!.utcOffset("-10:00", true).toISOString(),
+      limit: this.limitControl.value || undefined,
+      offset: this.offsetControl.value || undefined,
+      var_ids: selectedVariableIDs
+    };
+    
+    try{
+      if(this.sendToEmailControl.value) {
+        await this.reqService.emailDataPackage(params);
+        this.openDialog(`A download request has been generated. You should receive an email at ${this.emailControl.value} with your download package shortly. If you do not receive an email within a couple hours, please ensure the email address you entered is spelled correctly and try again or contact the site administrators.`, "info");
+      }
+      else {
+        let data = await this.reqService.getDataPackage(params);
+        this.loadData.progress = data.progress;
+        this.loadData.mode = "determinate";
+        let fileData = await data.fileData;
+        this.downloadService.download(fileData);
+        this.openDialog("Your download package has been generated. Check your browser for the downloaded data.", "info");
+      }
     }
-    catch {
-      this.openDialog("An error occurred while retrieving the mesonet data.", "error");
-      return;
+    catch(e) {
+      console.log(e);
+      this.openDialog("An error occurred while retrieving your data.", "error");
+
+      //need to get error code, check if 404 (gen 404 if no data)
+      //this.openDialog("No data was found. Please choose different options and try again.", "info");
     }
-    let formatFlags = this.singleFileControl.value ? PackageModeFlags.SINGLE : PackageModeFlags.MULTI;
-    formatFlags |= this.csvFormatControl.value == "matrix" ? PackageModeFlags.MATRIX : PackageModeFlags.TABLE;
-    let data: FileData[] = [];
-    if(this.fileFormatControl.value == "csv") {
-      data = this.packager.json2csv(measurements, this.selectedVariables, this.selectedStations, formatFlags);
-    }
-    else {
-      data = this.packager.json2data(measurements, formatFlags);
-    }
-    if(data.length > 0) {
-      this.downloadService.download(data);
-      this.openDialog("Your download package has been generated. Check your browser for the downloaded data.", "info");
-    }
-    else {
-      this.openDialog("No data was found. Please choose different options and try again.", "info");
-    }
-    this.loading = false;
+    this.loadData.loading = false;
   }
 }

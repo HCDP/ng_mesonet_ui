@@ -98,6 +98,10 @@ export class MultiSelectorComponent {
     });
     this.selected.next(values);
   }
+
+  test() {
+    console.log(document.activeElement);
+  }
 }
 
 interface GroupSelector {

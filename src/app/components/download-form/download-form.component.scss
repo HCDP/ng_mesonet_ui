@@ -3,8 +3,7 @@
 }
 
 .wrapper {
-    display: flex;
-    padding-top: 20px;
+    padding-left: 50px;
 }
 
 .prop-wrapper {
@@ -16,6 +15,7 @@
 .group {
     padding: 10px;
     min-width: fit-content;
+    white-space: nowrap;
 }
 
 .item {
@@ -25,12 +25,16 @@
 
 .warn-props {
     width: 250px;
-    position: relative;
-    top: -27px;
+    border: 5px;
+    border-color: #FFCC00;
+    border-style: solid;
+    border-radius: 10px;
+    padding: 10px;
 }
 
 .warning {
-    padding-bottom: 5px;
+    padding-bottom: 10px;
+    white-space: wrap;
 }
 
 .select-item {
@@ -50,8 +54,34 @@
 
 .info {
     padding: 5px;
+    cursor: help;
 }
 
 .loading {
     padding: 10px;
+}
+
+.accent {
+    color: #3f51b5;
+}
+
+.selector {
+    display: inline-block;
+    position: relative;
+    top: 0;
+    height: 50px;
+    z-index: 10000;
+    vertical-align: top;
+    padding: 10px;
+    white-space: wrap;
+}
+
+.button-container {
+    width: fit-content;
+    padding-top: 20px;
+}
+
+.spacer {
+    display: inline-block;
+    padding-left: 15px;
 }
