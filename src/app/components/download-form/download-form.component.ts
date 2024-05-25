@@ -81,10 +81,6 @@ export class DownloadFormComponent {
   };
 
   constructor(private reqService: ReqService, private downloadService: DownloadHelperService, public dialog: MatDialog) {
-    this.reqService.getMeasurements("0141", {
-      start_date: "2010-02-24T10:10:10Z",
-      end_date: "2010-02-25T10:10:10Z",
-    });
     this.getStationsAndVariables();
     this.emailControl.setValidators(Validators.email);
 
@@ -162,6 +158,7 @@ export class DownloadFormComponent {
 
   stationsSelected(stations: StationData[]) {
     this.selectedStations = stations;
+    this.checkForceEmail();
   }
 
   variablesSelected(variables: VariableData[]) {
@@ -193,7 +190,9 @@ export class DownloadFormComponent {
 
   checkForceEmail() {
     let forceEmail = false;
-    if(this.startControl.value && this.endControl.value && this.endControl.value.diff(this.startControl.value, "months") > 1) {
+    console.log(this.selectedStations.length);
+    console.log(this.endControl.value!.diff(this.startControl.value, "weeks", true));
+    if(this.selectedStations.length > 5 || (this.startControl.value && this.endControl.value && this.endControl.value.diff(this.startControl.value, "weeks", true) > 1)) {
       this.sendToEmailControl.setValue(true);
       forceEmail = true;
     }
