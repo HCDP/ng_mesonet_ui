@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import * as config from "../../assets/config.json"
 import { HttpClient, HttpErrorResponse, HttpEvent, HttpEventType, HttpHeaders } from "@angular/common/http";
 import { BehaviorSubject, Observable, retry, firstValueFrom } from 'rxjs';
@@ -7,14 +8,14 @@ import { BehaviorSubject, Observable, retry, firstValueFrom } from 'rxjs';
   providedIn: 'root'
 })
 export class ReqService {
-  private static readonly API_URL = "https://api.hcdp.ikewai.org";
+  private static readonly API_URL = "https://cistore.its.hawaii.edu:8443";
   private static readonly API_HEADER = new HttpHeaders({
     "Authorization": `Bearer ${config.apiToken}`
   })
   private static readonly RETRIES = 0;
 
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private router: Router) { }
 
   private async getFromAPI(ep: string, urlParams: any = {}, options: any = {headers: ReqService.API_HEADER}, retries = ReqService.RETRIES): Promise<any> {
     let paramString = this.encodeURLParams(urlParams);
@@ -29,8 +30,12 @@ export class ReqService {
     ));
   }
 
+  private getLocation() {
+    let location = this.router.url.split("/")[1];
+    return location;
+  }
+
   private getFile(url: string, retries = ReqService.RETRIES): FileDownloadInfo {
-    console.log(url);
     const responseType: "arraybuffer" = "arraybuffer";
     const observe: "events" = "events";
     let options = {
@@ -73,13 +78,16 @@ export class ReqService {
 
   async getStations(): Promise<StationData[]> {
     const ep = "/mesonet/getStations";
-    return this.getFromAPI(ep);
+    return this.getFromAPI(ep, {
+      location: this.getLocation()
+    });
   }
 
   async getVariables(stationID: string): Promise<VariableData[]> {
     const ep = "/mesonet/getVariables";
     return this.getFromAPI(ep, {
-      station_id: stationID
+      station_id: stationID,
+      location: this.getLocation()
     });
   }
 
@@ -87,6 +95,7 @@ export class ReqService {
     const ep = "/mesonet/getMeasurements";
     return this.getFromAPI(ep, {
       station_id: stationID,
+      location: this.getLocation(),
       ...options
     }).then((data: MeasurementData) => {
       delete data["measurements_in_file"];
@@ -96,7 +105,10 @@ export class ReqService {
 
   async getDataPackage(options: PackageParams): Promise<FileDownloadInfo> {
     const ep = "/mesonet/createPackage/link";
-    const link = await this.getFromAPI(ep, options, {
+    const link = await this.getFromAPI(ep, {
+      location: this.getLocation(),
+      ...options
+    }, {
       headers: ReqService.API_HEADER,
       responseType: "text"
     });
@@ -105,7 +117,10 @@ export class ReqService {
 
   async emailDataPackage(options: PackageParams): Promise<string> {
     const ep = "/mesonet/createPackage/email";
-    return this.getFromAPI(ep, options, {
+    return this.getFromAPI(ep, {
+      location: this.getLocation(),
+      ...options
+    }, {
       headers: ReqService.API_HEADER,
       responseType: "text"
     });
