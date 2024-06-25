@@ -8,7 +8,7 @@ import { BehaviorSubject, Observable, retry, firstValueFrom } from 'rxjs';
   providedIn: 'root'
 })
 export class ReqService {
-  private static readonly API_URL = "https://cistore.its.hawaii.edu:8443";
+  private static readonly API_URL = "https://api.hcdp.ikewai.org";
   private static readonly API_HEADER = new HttpHeaders({
     "Authorization": `Bearer ${config.apiToken}`
   })
